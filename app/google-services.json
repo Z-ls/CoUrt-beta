@@ -1,0 +1,69 @@
+{
+  "project_info": {
+    "project_number": "718993765689",
+    "firebase_url": "https://fir-court-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "fir-court",
+    "storage_bucket": "fir-court.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:718993765689:android:ebdd485cd55a2679c724e8",
+        "android_client_info": {
+          "package_name": "com.example.lab4"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "718993765689-dohc0pa6omlu5e32oqoolvp229gkpt81.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCWUv-EsHGKtoQf5TPja26ns1Qn8CS1TUQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "718993765689-dohc0pa6omlu5e32oqoolvp229gkpt81.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:718993765689:android:4512a59e82af9e82c724e8",
+        "android_client_info": {
+          "package_name": "it.polito.mad.court"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "718993765689-dohc0pa6omlu5e32oqoolvp229gkpt81.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCWUv-EsHGKtoQf5TPja26ns1Qn8CS1TUQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "718993765689-dohc0pa6omlu5e32oqoolvp229gkpt81.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

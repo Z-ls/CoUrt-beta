@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">lab4</string>
+    <string name="bottomButton1">Play</string>
+    <string name="bottomButton2">Discovery</string>
+    <string name="bottomButton3">Community</string>
+    <string name="bottomButton4">Profile</string>
+
+</resources>
