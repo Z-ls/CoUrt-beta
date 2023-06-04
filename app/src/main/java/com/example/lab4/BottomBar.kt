@@ -1,41 +1,48 @@
 package com.example.lab4
 
-import Fragment3
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
-
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
 
 
-class ButtomBar : AppCompatActivity() {
-    var f1: Fragment1? = null
-    var f2: Fragment2? = null
-    var f3: Fragment3? = null
-    var f4: Fragment4? = null
-    var f5: Fragment5? = null
-    var b1: Button? = null
-    var b2: Button? = null
-    var b3: Button? = null
-    var b4: Button? = null
+class BottomBar : AppCompatActivity(), Fragment5Listener, Fragment4Listener {
+    private var f1: Fragment1? = null
+    private var f2: Fragment2? = null
+    private var f3: Fragment3? = null
+    private var f4: Fragment4? = null
+    private var f5: Fragment5? = null
+    private var b1: Button? = null
+    private var b2: Button? = null
+    private var b3: Button? = null
+    private var b4: Button? = null
+
+    override fun switchToFragment4() {
+        page4(null)
+    }
+
+    override fun switchToFragment5() {
+        page5(null)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.bottombar)
-        b1 = findViewById(R.id.buttom1) as Button?
-        b2 = findViewById(R.id.buttom2) as Button?
-        b3 = findViewById(R.id.buttom3) as Button?
-        b4 = findViewById(R.id.buttom4) as Button?
-        b1?.setOnClickListener { page1(it) }
-        b2?.setOnClickListener { page2(it) }
-        b3?.setOnClickListener { page3(it) }
-        b4?.setOnClickListener { page4(it) }
-        page1(null)
+        b1 = findViewById(R.id.buttom1)
+        b2 = findViewById(R.id.buttom2)
+        b3 = findViewById(R.id.buttom3)
+        b4 = findViewById(R.id.buttom4)
+        b1?.setOnClickListener { page1() }
+        b2?.setOnClickListener { page2() }
+        b3?.setOnClickListener { page3() }
+        b4?.setOnClickListener { page4() }
+        page2()
     }
 
-    fun page1(v: View?) {
-        val fragmentManager: FragmentManager = getSupportFragmentManager()
+    fun page1(v: View? = null) {
+        val fragmentManager: FragmentManager = supportFragmentManager
         val transaction: FragmentTransaction = fragmentManager.beginTransaction()
         if (f1 == null) {
             f1 = Fragment1()
@@ -46,8 +53,8 @@ class ButtomBar : AppCompatActivity() {
         transaction.commit()
     }
 
-    fun page2(v: View?) {
-        val fragmentManager: FragmentManager = getSupportFragmentManager()
+    fun page2(v: View? = null) {
+        val fragmentManager: FragmentManager = supportFragmentManager
         val transaction: FragmentTransaction = fragmentManager.beginTransaction()
         if (f2 == null) {
             f2 = Fragment2()
@@ -58,8 +65,8 @@ class ButtomBar : AppCompatActivity() {
         transaction.commit()
     }
 
-    fun page3(v: View?) {
-        val fragmentManager: FragmentManager = getSupportFragmentManager()
+    fun page3(v: View? = null) {
+        val fragmentManager: FragmentManager = supportFragmentManager
         val transaction: FragmentTransaction = fragmentManager.beginTransaction()
         if (f3 == null) {
             f3 = Fragment3()
@@ -70,8 +77,8 @@ class ButtomBar : AppCompatActivity() {
         transaction.commit()
     }
 
-    fun page4(v: View?) {
-        val fragmentManager: FragmentManager = getSupportFragmentManager()
+    fun page4(v: View? = null) {
+        val fragmentManager: FragmentManager = supportFragmentManager
         val transaction: FragmentTransaction = fragmentManager.beginTransaction()
         if (f4 == null) {
             f4 = Fragment4()
@@ -82,7 +89,7 @@ class ButtomBar : AppCompatActivity() {
         transaction.commit()
     }
 
-    fun page5(v: View?) {
+    private fun page5(v: View? = null) {
         val fragmentManager: FragmentManager = supportFragmentManager
         val transaction: FragmentTransaction = fragmentManager.beginTransaction()
         if (f5 == null) {
@@ -111,4 +118,12 @@ class ButtomBar : AppCompatActivity() {
             transaction.hide(f5!!)
         }
     }
+}
+
+interface Fragment5Listener {
+    fun switchToFragment4()
+}
+
+interface Fragment4Listener {
+    fun switchToFragment5()
 }

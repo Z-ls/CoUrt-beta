@@ -2,6 +2,7 @@ package it.polito.mad.court.composable
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PageSize
+import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,6 +25,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -30,7 +34,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -44,7 +47,10 @@ fun UserInputDialog(
 ) {
 
 //    val newUser by rememberSaveable { mutableStateOf(User()) }
-    val pagerState = rememberPagerState(0)
+    val pagerState = rememberPagerState(
+        initialPage = 0,
+        initialPageOffsetFraction = 0f
+    ) { 3 }
     val coroutineScope = rememberCoroutineScope()
 
     val onSave = {
@@ -74,52 +80,64 @@ fun UserInputDialog(
                         .height(400.dp),
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    HorizontalPager(pageCount = 3, state = pagerState) {
-                        when (it) {
-                            0 -> Page1()
-                            1 -> Page2()
-                            2 -> Page3()
+                    HorizontalPager(
+                        modifier = Modifier,
+                        state = pagerState,
+                        pageSpacing = 0.dp,
+                        userScrollEnabled = true,
+                        reverseLayout = false,
+                        beyondBoundsPageCount = 0,
+                        pageSize = PageSize.Fill,
+                        key = null,
+                        pageNestedScrollConnection = PagerDefaults.pageNestedScrollConnection(
+                            Orientation.Horizontal
+                        ),
+                        pageContent = {
+                            when (it) {
+                                0 -> Page1()
+                                1 -> Page2()
+                                2 -> Page3()
+                            }
+                        }
+                    )
+                    Column(
+                        modifier = Modifier
+                            .padding(top = 16.dp)
+                            .fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Button(
+                            modifier = Modifier.width(200.dp),
+                            onClick = {
+                                if (pagerState.canScrollForward) {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                    }
+                                } else {
+                                    onSave()
+                                }
+                            },
+                        ) {
+                            Text(if (pagerState.currentPage == 2) "Finish" else "Next")
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Button(
+                            modifier = Modifier.width(200.dp),
+                            onClick = {
+                                if (pagerState.canScrollBackward) {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                                    }
+                                }
+                            },
+                            enabled = pagerState.canScrollBackward
+                        ) {
+                            Text("Previous")
                         }
                     }
                 }
-                Column(
-                    modifier = Modifier
-                        .padding(top = 16.dp)
-                        .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Button(
-                        modifier = Modifier.width(200.dp),
-                        onClick = {
-                            if (pagerState.canScrollForward) {
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                                }
-                            } else {
-                                onSave()
-                            }
-                        },
-                    ) {
-                        Text(if (pagerState.currentPage == 2) "Finish" else "Next")
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Button(
-                        modifier = Modifier.width(200.dp),
-                        onClick = {
-                            if (pagerState.canScrollBackward) {
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(pagerState.currentPage - 1)
-                                }
-                            }
-                        },
-                        enabled = pagerState.canScrollBackward
-                    ) {
-                        Text("Previous")
-                    }
-                }
             }
-        }
-    )
+        })
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -173,8 +191,8 @@ fun Page3() {
 fun Page2() {
     var gender by rememberSaveable { mutableStateOf("") }
     var birthdate by rememberSaveable { mutableStateOf(LocalDate.now()) }
-    var height by rememberSaveable { mutableStateOf(0) }
-    var weight by rememberSaveable { mutableStateOf(0) }
+    var height by rememberSaveable { mutableIntStateOf(0) }
+    var weight by rememberSaveable { mutableIntStateOf(0) }
     var bio by rememberSaveable { mutableStateOf("") }
 
     Column(
@@ -269,10 +287,4 @@ fun Page1() {
                 .padding(bottom = 8.dp)
         )
     }
-}
-
-@Composable
-@Preview
-fun PreviewFormUserInfo() {
-    UserInputDialog {}
 }

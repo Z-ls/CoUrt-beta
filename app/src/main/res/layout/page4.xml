@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/page4"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/constant_background_color"
@@ -10,7 +10,7 @@
     <LinearLayout
         android:id="@+id/ll_profile_all"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:layout_marginLeft="16dp"
         android:layout_marginRight="16dp"
         android:orientation="vertical">
@@ -41,7 +41,7 @@
                 <LinearLayout
                     android:id="@+id/ll_profile_head_information"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="0dp"
                     android:layout_weight="1"
                     android:gravity="center|bottom"
                     android:orientation="vertical">
@@ -51,8 +51,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center_horizontal"
-                        android:text="erengul"
-                        android:textSize="@dimen/small_text_size"
+                        android:text=""
+                        android:textSize="18sp"
                         android:textStyle="italic">
 
                     </TextView>
@@ -63,7 +63,7 @@
                         android:layout_height="wrap_content"
                         android:gravity="center_horizontal"
 
-                        android:text="Eren Gul"
+                        android:text=""
                         android:textColor="@color/black"
                         android:textSize="@dimen/medium_text_size"
                         android:textStyle="bold">
@@ -82,7 +82,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:gravity="center|left"
-                            android:text="Torino, IT" />
+                            android:text="" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -206,12 +206,13 @@
 
 
                 </LinearLayout>
+
                 <LinearLayout
                     android:id="@+id/ll_profile_interests"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_margin="10sp"
-                    android:orientation="horizontal"/>
+                    android:orientation="horizontal" />
             </LinearLayout>
 
 

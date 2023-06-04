@@ -12,9 +12,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Lab4"
         tools:targetApi="31">
-        <activity android:name=".MainActivity"></activity>
         <activity
-            android:name=".ButtomBar"
+            android:name="it.polito.mad.court.ViewInvitations"
+            android:exported="false"
+            android:label="@string/title_activity_view_invitations"
+            android:theme="@style/Theme.Lab4" />
+        <activity android:name=".MainActivity" />
+        <activity
+            android:name=".BottomBar"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -22,12 +27,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <activity android:name=".page1"></activity>
-        <activity android:name=".page2"></activity>
-        <activity android:name=".page3"></activity>
-        <activity android:name=".page4"></activity>
-        <activity android:name=".page4_edit"></activity>
+        <activity android:name=".page1" />
+        <activity android:name=".page2" />
+        <activity android:name=".page3" />
+        <activity android:name=".page4" />
+        <activity android:name=".page4_edit" />
     </application>
 
 </manifest>

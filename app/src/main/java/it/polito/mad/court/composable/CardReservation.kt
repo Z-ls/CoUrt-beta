@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults.cardColors
@@ -42,6 +43,7 @@ import it.polito.mad.court.dataclass.Reservation
 @Composable
 fun CardReservation(
     res: Reservation, onModifyClick: () -> Unit,
+    onInviteClick: () -> Unit,
     onRemoveClick: () -> Unit,
     onRatingClick: () -> Unit
 ) {
@@ -117,7 +119,13 @@ fun CardReservation(
                     visible = isExpanded,
                     Modifier.alpha(alpha)
                 ) {
-                    CardReservationAdditionalInfo(res, onModifyClick, onRemoveClick, onRatingClick)
+                    CardReservationAdditionalInfo(
+                        res,
+                        onInviteClick,
+                        onModifyClick,
+                        onRemoveClick,
+                        onRatingClick
+                    )
                 }
             }
         }
@@ -127,6 +135,7 @@ fun CardReservation(
 @Composable
 fun CardReservationAdditionalInfo(
     res: Reservation,
+    onInviteClick: () -> Unit,
     onModifyClick: () -> Unit,
     onRemoveClick: () -> Unit,
     onRatingClick: () -> Unit
@@ -138,6 +147,7 @@ fun CardReservationAdditionalInfo(
             listOf("Beginner", "Intermediate", "Advanced")[res.skillLevel]
         )
         ActionButtonRow(
+            onInviteClick = onInviteClick,
             onModifyClick = onModifyClick,
             onRemoveClick = onRemoveClick,
             onRatingClick = onRatingClick,
@@ -166,6 +176,7 @@ fun ReservationDetailRow(label: String, value: String) {
 
 @Composable
 fun ActionButtonRow(
+    onInviteClick: () -> Unit,
     onModifyClick: () -> Unit,
     onRemoveClick: () -> Unit,
     onRatingClick: () -> Unit
@@ -176,34 +187,41 @@ fun ActionButtonRow(
         horizontalArrangement = Arrangement.End
     ) {
         IconButton(
-            onClick = { onModifyClick() },
-            modifier = Modifier.padding(end = 8.dp),
+            onClick = onInviteClick
         ) {
             Icon(
-                Icons.Default.Edit,
+                imageVector = Icons.Filled.Send,
+                contentDescription = "Invite",
+            )
+        }
+
+        IconButton(
+            onClick = onModifyClick
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Edit,
                 contentDescription = "Modify",
                 tint = Color.Black
             )
         }
 
         IconButton(
-            onClick = { onRemoveClick() },
+            onClick = onRatingClick
         ) {
             Icon(
-                Icons.Default.Delete,
-                contentDescription = "Remove",
-                tint = Color.Red
+                imageVector = Icons.Filled.Star,
+                contentDescription = "Comment",
+                tint = Color.Black
             )
         }
 
         IconButton(
-            onClick = { onRatingClick() },
-            modifier = Modifier.padding(8.dp)
+            onClick = onRemoveClick
         ) {
             Icon(
-                imageVector = Icons.Filled.Star,
-                contentDescription = "Rating",
-                tint = Color.Gray
+                imageVector = Icons.Filled.Delete,
+                contentDescription = "Remove",
+                tint = Color.Red
             )
         }
     }

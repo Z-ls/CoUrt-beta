@@ -1,6 +1,7 @@
 package com.example.lab4
 
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -19,6 +20,28 @@ import it.polito.mad.court.dataclass.User
 
 
 class Fragment5 : Fragment() {
+
+    private var listener: Fragment5Listener? = null
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        if (context is Fragment5Listener) {
+            listener = context
+        } else {
+            throw IllegalArgumentException("Activity must implement Fragment5Listener")
+        }
+    }
+
+    override fun onDetach() {
+        super.onDetach()
+        listener = null
+    }
+
+    // Call this method when you want to switch to Fragment1
+    private fun switchToFragment4() {
+        listener?.switchToFragment4()
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -48,13 +71,11 @@ class Fragment5 : Fragment() {
     }
 
     private fun switchToNextView() {
-        val nextFragment = Fragment4() // Replace with the fragment you want to switch to
         parentFragmentManager.beginTransaction()
-            .add(R.id.frame, nextFragment)
             .addToBackStack(null)
             .hide(this)
-            .show(nextFragment)
             .commit()
+        switchToFragment4()
     }
 
     private fun onSave(user: User, view: View) {
@@ -95,6 +116,8 @@ class Fragment5 : Fragment() {
                     android.R.layout.simple_spinner_dropdown_item,
                     listOf("Not Interested", "Beginner", "Intermediate", "Advanced")
                 )
+                val skillLevelIndex = user.sportList.firstOrNull { pair -> pair.first == it }?.second ?: 0
+                spSkillLevel.setSelection(skillLevelIndex)
                 spSkillLevel.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                     override fun onItemSelected(
                         parent: AdapterView<*>,

@@ -1,12 +1,13 @@
 package it.polito.mad.court.composable
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +19,8 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PageSize
+import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -29,8 +32,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -39,14 +42,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.PopupProperties
-import com.github.javafaker.Faker
-import com.google.firebase.database.FirebaseDatabase
-import com.google.gson.Gson
 import it.polito.mad.court.DbCourt
 import it.polito.mad.court.dataclass.Court
 import it.polito.mad.court.dataclass.DateString
@@ -54,10 +53,11 @@ import it.polito.mad.court.dataclass.Reservation
 import it.polito.mad.court.dataclass.TimeString
 import it.polito.mad.court.dataclass.User
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -65,12 +65,15 @@ import kotlin.math.roundToInt
 fun DialogReservationForm(
     user: User = User(), res: Reservation = Reservation(user = user), onDismiss: () -> Unit
 ) {
-    val isUpdating = remember { mutableStateOf(res.id != "") }
-    val newReservation = remember { mutableStateOf(res) }
-    val court = remember { mutableStateOf(res.court) }
-    val showWarning = remember { mutableStateOf(false) }
-    val msgWarnings = remember { mutableStateOf(listOf<String>()) }
-    val pagerState = rememberPagerState(0)
+    val isUpdating by remember { mutableStateOf(res.id != "") }
+    var newReservation by remember { mutableStateOf(res) }
+    var court by remember { mutableStateOf(res.court) }
+    var showWarning by remember { mutableStateOf(false) }
+    var msgWarnings by remember { mutableStateOf(listOf<String>()) }
+    val pagerState = rememberPagerState(
+        initialPage = 0,
+        initialPageOffsetFraction = 0f
+    ) { 2 }
     val coroutineScope = rememberCoroutineScope()
 
     Dialog(
@@ -88,30 +91,46 @@ fun DialogReservationForm(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             HorizontalPager(
-                state = pagerState, pageCount = 2
-            ) { page ->
-                when (page) {
-                    0 -> {
-                        DialogCourtForm(
-                            court = court, res = newReservation.value
-                        )
-                    }
+                modifier = Modifier,
+                state = pagerState,
+                pageSpacing = 0.dp,
+                userScrollEnabled = true,
+                reverseLayout = false,
+                contentPadding = PaddingValues(0.dp),
+                beyondBoundsPageCount = 0,
+                pageSize = PageSize.Fill,
+                key = null,
+                pageNestedScrollConnection = PagerDefaults.pageNestedScrollConnection(
+                    Orientation.Horizontal
+                ),
+                pageContent = { it ->
+                    when (it) {
+                        0 -> {
+                            DialogCourtForm(
+                                court = court,
+                                res = newReservation,
+                                onSelect = { selectedCourt ->
+                                    court = selectedCourt
+                                    newReservation.court = selectedCourt
+                                }
+                            )
+                        }
 
-                    1 -> {
-                        DialogUserForm(
-                            res = newReservation.value,
-                            onMinPlayersChanged = { newReservation.value.minPlayers = it },
-                            onMaxPlayersChanged = { newReservation.value.maxPlayers = it },
-                            onSkillLevelValueChange = { newReservation.value.skillLevel = it })
+                        1 -> {
+                            DialogUserForm(
+                                res = newReservation,
+                                onMinPlayersChanged = { newReservation.minPlayers = it },
+                                onMaxPlayersChanged = { newReservation.maxPlayers = it },
+                                onSkillLevelValueChange = { newReservation.skillLevel = it })
+                        }
                     }
                 }
-            }
-
+            )
             Column(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (showWarning.value) msgWarnings.value.forEach {
+                if (showWarning) msgWarnings.forEach {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -139,17 +158,17 @@ fun DialogReservationForm(
                             }
                         } else {
                             coroutineScope.launch {
-                                if (checkValidReservation(newReservation.value).first) {
-                                    if (isUpdating.value) {
-                                        DbCourt().updateReservation(newReservation.value)
+                                if (checkValidReservation(newReservation).first) {
+                                    if (isUpdating) {
+                                        DbCourt().updateReservation(newReservation)
                                     } else {
-                                        DbCourt().addReservation(newReservation.value)
+                                        DbCourt().addReservation(user, newReservation)
                                     }
                                     onDismiss()
                                 } else {
-                                    msgWarnings.value =
-                                        checkValidReservation(newReservation.value).second
-                                    showWarning.value = true
+                                    msgWarnings =
+                                        checkValidReservation(newReservation).second
+                                    showWarning = true
                                 }
                             }
                         }
@@ -161,8 +180,8 @@ fun DialogReservationForm(
                 Button(
                     onClick = {
                         coroutineScope.launch {
-                            newReservation.value = Reservation(user = user)
-                            court.value = Court()
+                            newReservation = Reservation(user = user)
+                            court = Court()
                             onDismiss()
                         }
                     }, modifier = Modifier.fillMaxWidth()
@@ -174,8 +193,7 @@ fun DialogReservationForm(
     }
 }
 
-
-fun checkValidReservation(res: Reservation): Pair<Boolean, List<String>> {
+suspend fun checkValidReservation(res: Reservation): Pair<Boolean, List<String>> {
     var valid = true
     val warnings = mutableListOf<String>()
 
@@ -199,17 +217,28 @@ fun checkValidReservation(res: Reservation): Pair<Boolean, List<String>> {
         valid = false
         warnings.add("Please choose a duration")
     }
-    runBlocking { }
-    DbCourt().checkCourtAvailability(
-        res.court.name,
-        res.date.date,
-        res.time.time,
-        res.duration
-    ) { available ->
-        if (!available) {
-            valid = false
-            warnings.add("Court is not available at the selected time")
-        }
+    if (res.time.time.plusMinutes(res.duration.toLong()) > LocalTime.of(23, 59)) {
+        valid = false
+        warnings.add("The reservation cannot end after midnight")
+    }
+    if (res.time.time.isBefore(res.court.openingTime)) {
+        valid = false
+        warnings.add("The court is not opened at the selected time")
+    }
+    if (res.time.time.plusHours(res.duration.toLong()).isAfter(res.court.closingTime)) {
+        valid = false
+        warnings.add("The court is closed at the selected time")
+    }
+    if (checkCourtAvailability(
+            res.id,
+            res.court,
+            res.date.date,
+            res.time.time,
+            res.duration
+        ).not()
+    ) {
+        valid = false
+        warnings.add("The court is not available at the selected time")
     }
     return Pair(valid, warnings)
 }
@@ -223,8 +252,8 @@ fun DialogUserForm(
     onMaxPlayersChanged: (Int) -> Unit,
 ) {
 
-    val minPlayers = remember { mutableStateOf(res.minPlayers) }
-    val maxPlayers = remember { mutableStateOf(res.maxPlayers) }
+    var minPlayers by remember { mutableIntStateOf(res.minPlayers) }
+    var maxPlayers by remember { mutableIntStateOf(res.maxPlayers) }
 
     Column(
         modifier = Modifier
@@ -242,13 +271,13 @@ fun DialogUserForm(
                 modifier = Modifier
                     .padding(end = 8.dp)
                     .fillMaxWidth(0.5f),
-                value = minPlayers.value.toString(),
+                value = minPlayers.toString(),
                 onValueChange = {
                     if (it.isNotEmpty()) {
-                        minPlayers.value = it.toInt()
+                        minPlayers = it.toInt()
                         onMinPlayersChanged(it.toInt())
                     } else {
-                        minPlayers.value = 0
+                        minPlayers = 0
                         onMinPlayersChanged(0)
                     }
                 },
@@ -260,13 +289,13 @@ fun DialogUserForm(
             )
             OutlinedTextField(
                 modifier = Modifier.padding(start = 8.dp),
-                value = maxPlayers.value.toString(),
+                value = maxPlayers.toString(),
                 onValueChange = {
                     if (it.isNotEmpty()) {
-                        maxPlayers.value = it.toInt()
+                        maxPlayers = it.toInt()
                         onMaxPlayersChanged(it.toInt())
                     } else {
-                        maxPlayers.value = 0
+                        maxPlayers = 0
                         onMaxPlayersChanged(0)
                     }
                 },
@@ -293,7 +322,7 @@ fun SkillLevelSlider(
     res: Reservation, onSkillLevelChanged: (Int) -> Unit
 ) {
 
-    val skillLevelIndex = remember { mutableStateOf(res.skillLevel) }
+    var skillLevelIndex by remember { mutableIntStateOf(res.skillLevel) }
 
     Column(
         modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally
@@ -303,8 +332,8 @@ fun SkillLevelSlider(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            RadioButton(selected = skillLevelIndex.value == 0, onClick = {
-                skillLevelIndex.value = 0
+            RadioButton(selected = skillLevelIndex == 0, onClick = {
+                skillLevelIndex = 0
                 onSkillLevelChanged(0)
             })
             Text(modifier = Modifier.padding(end = 16.dp), text = "Beginner")
@@ -314,8 +343,8 @@ fun SkillLevelSlider(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            RadioButton(selected = skillLevelIndex.value == 1, onClick = {
-                skillLevelIndex.value = 1
+            RadioButton(selected = skillLevelIndex == 1, onClick = {
+                skillLevelIndex = 1
                 onSkillLevelChanged(1)
             })
             Text(modifier = Modifier.padding(end = 16.dp), text = "Intermediate")
@@ -325,8 +354,8 @@ fun SkillLevelSlider(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            RadioButton(selected = skillLevelIndex.value == 2, onClick = {
-                skillLevelIndex.value = 2
+            RadioButton(selected = skillLevelIndex == 2, onClick = {
+                skillLevelIndex = 2
                 onSkillLevelChanged(2)
             })
             Text(modifier = Modifier.padding(end = 16.dp), text = "Advanced")
@@ -337,11 +366,13 @@ fun SkillLevelSlider(
 
 @Composable
 fun DialogCourtForm(
-    court: MutableState<Court>, res: Reservation
+    court: Court,
+    res: Reservation,
+    onSelect: (Court) -> Unit
 ) {
 
-    val selectedDate = remember { mutableStateOf(res.date.date) }
-    val selectedTime = remember { mutableStateOf(res.time.time) }
+    var selectedDate by remember { mutableStateOf(res.date.date) }
+    var selectedTime by remember { mutableStateOf(res.time.time) }
 
     Column(
         modifier = Modifier
@@ -353,31 +384,29 @@ fun DialogCourtForm(
     ) {
         DialogCourtSelection(
             courtName = res.court.name,
-            onSelect = {
-                court.value = it
-                res.court = it
-            },
+            onSelect = onSelect,
         )
         Row(
             modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            ButtonDatePicker(selectedDate.value) {
-                selectedDate.value = it
+            ButtonDatePicker(selectedDate) {
+                selectedDate = it
                 res.date = DateString(it)
             }
             Spacer(modifier = Modifier.width(16.dp))
-            ButtonTimePicker(selectedTime.value) {
-                selectedTime.value = it
+            ButtonTimePicker(selectedTime) {
+                selectedTime = it
                 res.time = TimeString(it)
             }
         }
-        court.value.let {
+        court.let {
             DurationDropdown(price = it.price,
                 duration = res.duration,
                 onDurationSelected = { duration ->
                     res.duration = duration
                     res.price = (duration * it.price).roundToInt()
-                })
+                }
+            )
         }
     }
 }
@@ -386,7 +415,7 @@ fun DialogCourtForm(
 fun DurationDropdown(
     price: Double, duration: Int, onDurationSelected: (Int) -> Unit
 ) {
-    var selectedDuration by remember { mutableStateOf(duration) }
+    var selectedDuration by remember { mutableIntStateOf(duration) }
     var expanded by remember { mutableStateOf(false) }
     val durationItems = (1..10).toList()
 
@@ -422,13 +451,12 @@ fun DurationDropdown(
 }
 
 
-@SuppressLint("MutableCollectionMutableState")
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun DialogCourtSelection(courtName: String, onSelect: (Court) -> Unit) {
 
     var searchText by remember { mutableStateOf("") }
-    val searchResult = remember { mutableStateOf(mutableListOf<Court>()) }
+    var searchResult by remember { mutableStateOf(listOf<Court>()) }
     var isSearchOpen by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier
@@ -442,10 +470,9 @@ fun DialogCourtSelection(courtName: String, onSelect: (Court) -> Unit) {
             value = searchText,
             onValueChange = {
                 searchText = it
-                searchByCourtName(
-                    it,
-                    searchResult,
-                )
+                DbCourt().searchCourtByName(
+                    it
+                ) { list -> searchResult = list }
                 isSearchOpen = true
             },
             label = { if (courtName.isNotBlank()) Text(courtName) else Text("Enter court name...") },
@@ -459,7 +486,7 @@ fun DialogCourtSelection(courtName: String, onSelect: (Court) -> Unit) {
             onDismissRequest = { isSearchOpen = false },
             properties = PopupProperties(focusable = false)
         ) {
-            searchResult.value.forEach { result ->
+            searchResult.forEach { result ->
                 DropdownMenuItem(onClick = {
                     onSelect(result)
                     searchText = result.name
@@ -470,82 +497,16 @@ fun DialogCourtSelection(courtName: String, onSelect: (Court) -> Unit) {
     }
 }
 
-@Preview
-@Composable
-fun DialogReservationFormPreview() {
-//    val court = Court(
-//        name = "Basketball court",
-//        address = "Via Giuseppe Verdi, 5, 10124 Torino TO",
-//        city = "Torino",
-//        country = "Italy",
-//        sport = "Basketball",
-//        price = 10.0,
-//        rating = 4.5
-//    )
-//    val user = User(
-//        email = "johndoe@gmail.com",
-//        firstname = "John",
-//        lastname = "doe",
-//        nickname = "J-Doe",
-//        gender = "male",
-//        birthdate = LocalDate.of(1993, 5, 5),
-//        height = 1.83,
-//        weight = 75.0,
-//        city = "Torino",
-//        country = "Italy",
-//        bio = "I like playing basketball",
-//        phone = "110-120-12315"
-//    )
-//    val res = Reservation(
-//        court = court,
-//        user = user,
-//        date = DateString(LocalDate.now()),
-//        time = TimeString(LocalTime.now()),
-//        duration = 1,
-//        price = 10,
-//        numPlayers = 8,
-//        skillLevel = 0
-//
-//    )
-//    DialogReservationForm(user, res) {}
-    val faker = Faker()
-    for (i in 1..20) {
-        DbCourt().addCourt(
-            Court(
-                rating = faker.number().randomDouble(1, 0, 5),
-                name = faker.company().name(),
-                address = faker.address().streetAddress(),
-                city = faker.address().city(),
-                country = faker.address().country(),
-                phone = faker.phoneNumber().phoneNumber(),
-                email = faker.internet().emailAddress(),
-                website = faker.internet().url(),
-                openingTime = "08:00",
-                closingTime = "19:00",
-                price = faker.number().randomDouble(1, 0, 100),
-                image = faker.internet().image(),
-                sport = faker.team().sport(),
-                description = faker.lorem().paragraph(),
-                isOutdoor = faker.bool().bool()
-            )
-        )
+suspend fun checkCourtAvailability(
+    id: String,
+    court: Court,
+    date: LocalDate,
+    time: LocalTime,
+    duration: Int
+): Boolean = suspendCoroutine { continuation ->
+    DbCourt().checkCourtAvailability(id, court, date, time, duration) {
+        continuation.resume(it)
     }
 }
 
-fun searchByCourtName(
-    name: String, results: MutableState<MutableList<Court>>
-) {
-    val gson = Gson()
-
-    FirebaseDatabase.getInstance().getReference("courts").get()
-        .addOnSuccessListener { dataSnapshot ->
-            if (dataSnapshot.exists()) {
-                results.value = dataSnapshot.children.map {
-                    gson.fromJson(
-                        it.value.toString(), Court::class.java
-                    )
-                }.filter { it.name.contains(name, ignoreCase = true) }.toMutableList()
-            }
-        }
-}
 

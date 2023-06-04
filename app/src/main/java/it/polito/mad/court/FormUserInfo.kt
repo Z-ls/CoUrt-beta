@@ -9,7 +9,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import it.polito.mad.court.ui.theme.CoUrtTheme
 
 class FormUserInfo : ComponentActivity() {
@@ -19,8 +18,7 @@ class FormUserInfo : ComponentActivity() {
             CoUrtTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background
                 ) {
                     Greeting3("Android")
                 }
@@ -32,15 +30,6 @@ class FormUserInfo : ComponentActivity() {
 @Composable
 fun Greeting3(name: String, modifier: Modifier = Modifier) {
     Text(
-        text = "Hello $name!",
-        modifier = modifier
+        text = "Hello $name!", modifier = modifier
     )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview3() {
-    CoUrtTheme {
-        Greeting3("Android")
-    }
 }

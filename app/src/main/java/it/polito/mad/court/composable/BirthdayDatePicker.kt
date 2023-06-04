@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import java.time.LocalDate
 
 @Composable
@@ -54,13 +53,4 @@ fun BirthdayDatePicker(
             }
         )
     }
-}
-
-@Composable
-@Preview(showBackground = true)
-fun DatePickerPreview() {
-    var date = LocalDate.now()
-    BirthdayDatePicker(date, onSelectDate = {
-        date = it
-    })
 }

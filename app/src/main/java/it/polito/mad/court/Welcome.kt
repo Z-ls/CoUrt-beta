@@ -29,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
 import com.example.lab4.R
 import it.polito.mad.court.ui.theme.CoUrtTheme
 import kotlinx.coroutines.delay
@@ -94,13 +93,5 @@ fun Logo() {
                 modifier = Modifier.fillMaxWidth(0.75f)
             )
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview2() {
-    CoUrtTheme {
-        Logo()
     }
 }

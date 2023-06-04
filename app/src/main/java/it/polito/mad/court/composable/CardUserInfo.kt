@@ -25,10 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import it.polito.mad.court.dataclass.User
-import java.time.LocalDate
 
 @Composable
 fun CardUserInfo(user: User) {
@@ -108,24 +106,4 @@ fun UserDetailRow(label: String, value: String) {
             },
         )
     }
-}
-
-@Preview
-@Composable
-fun CardUserInfoPreview() {
-    val user = User(
-        email = "johndoe@gmail.com",
-        firstname = "John",
-        lastname = "doe",
-        nickname = "J-Doe",
-        gender = "male",
-        birthdate = LocalDate.of(1993, 5, 5),
-        height = 1.83,
-        weight = 75.0,
-        city = "Torino",
-        country = "Italy",
-        bio = "I like playing basketball",
-        phone = "110-120-12315"
-    )
-    CardUserInfo(user = user)
 }

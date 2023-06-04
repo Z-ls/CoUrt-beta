@@ -1,25 +1,37 @@
+package com.example.lab4
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import androidx.annotation.Nullable
+import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
-import com.example.lab4.R
+import it.polito.mad.court.DbCourt
+import it.polito.mad.court.NavHost
+import it.polito.mad.court.dataclass.User
+import kotlinx.coroutines.runBlocking
 
 
 class Fragment3 : Fragment() {
-    var btn1: Button? = null
-    var btn2: Button? = null
-    var btn3: Button? = null
-    var btn4: Button? = null
-    var btn5: Button? = null
     override fun onCreateView(
         inflater: LayoutInflater,
-        @Nullable container: ViewGroup?,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val view: View = inflater.inflate(R.layout.page3, null)
-        return view
+        return inflater.inflate(R.layout.page3, null)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        var user: User?
+        super.onViewCreated(view, savedInstanceState)
+        runBlocking {
+            DbCourt().getUserByEmail("user1@gmail.com") {
+                user = it
+                val composeView = view.findViewById<ComposeView>(R.id.composeViewInvitations)
+                composeView.setContent {
+                    NavHost(user = user ?: User())
+                }
+            }
+        }
     }
 }

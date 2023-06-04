@@ -1,6 +1,7 @@
 package it.polito.mad.court.ui.theme
 
 import androidx.compose.ui.graphics.Color
+
 //
 //val Purple80 = Color(0xFFD0BCFF)
 //val PurpleGrey80 = Color(0xFFCCC2DC)
@@ -16,7 +17,7 @@ val Yellow80 = Color(0xFFFFD700)
 val Yellow40 = Color(0xFFFFC400)
 val Crimson80 = Color(0xFFDC143C)
 val Crimson40 = Color(0xFFDC143C)
-//val LightGreen80 = Color(0xFF90EE90)
+val LightGreen80 = Color(0xFF90EE90)
 //val LightGreen40 = Color(0xFF98FB98)
 
 //

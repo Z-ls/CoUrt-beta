@@ -11,16 +11,15 @@ data class Reservation(
     var date: DateString = DateString(LocalDate.now()),
     var duration: Int = 0,
     var price: Int = 0,
-    var status: Status = Status.ACTIVE,
+    var status: ReservationStatus = ReservationStatus.ACTIVE,
     var minPlayers: Int = 1,
     var maxPlayers: Int = 2,
     var numPlayers: Int = 1,
     var skillLevel: Int = 0,
+    var players: MutableList<User> = mutableListOf(),
 )
 
-
-
-enum class Status {
+enum class ReservationStatus {
     ACTIVE,
     COMPLETED,
     CANCELED;
@@ -33,4 +32,5 @@ enum class Status {
         }
     }
 }
+
 
