@@ -1,5 +1,6 @@
 package it.polito.mad.court
 
+import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -35,8 +37,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
@@ -45,6 +49,7 @@ import androidx.navigation.compose.rememberNavController
 import it.polito.mad.court.composable.CardInvitation
 import it.polito.mad.court.composable.PageTitle
 import it.polito.mad.court.dataclass.Invitation
+import it.polito.mad.court.dataclass.InvitationStatus
 import it.polito.mad.court.dataclass.User
 import it.polito.mad.court.ui.theme.CoUrtTheme
 import it.polito.mad.court.ui.theme.Orange80
@@ -91,9 +96,11 @@ fun NavHost(user: User = User()) {
 fun PageViewInvitations(
     user: User = User(),
     navController: NavController,
-    bySender: Boolean = false
+    bySender: Boolean,
 ) {
 
+    val isUsingLandscape =
+        LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     var listInvitations by remember { mutableStateOf<List<Invitation>>(listOf()) }
     var toggleRefresh by remember { mutableStateOf(false) }
 
@@ -104,6 +111,10 @@ fun PageViewInvitations(
     LaunchedEffect(toggleRefresh) {
         DbCourt().getInvitationsByRole(user.email, bySender) { Invitations ->
             listInvitations = Invitations
+            if (bySender) listInvitations = listInvitations.map {
+                it.status = InvitationStatus.ACCEPTED
+                it
+            }
         }
     }
 
@@ -130,7 +141,9 @@ fun PageViewInvitations(
             Row(
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                if (bySender) PageTitle("Invitations Sent") else PageTitle("Invitations Received")
+                if (!isUsingLandscape) if (bySender) PageTitle("Invitations Sent") else PageTitle(
+                    "Invitations Received"
+                )
             }
             Row(
                 modifier = Modifier
@@ -187,10 +200,22 @@ fun RowCardInvitations(
     user: User,
     listInvitations: List<Invitation>,
 ) {
-    LazyColumn(
+
+    if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE)
+        LazyRow(
+            modifier = Modifier
+                .wrapContentHeight(Alignment.Top)
+        ) {
+            itemsIndexed(listInvitations) { _, invitation ->
+                CardInvitation(
+                    user = user,
+                    invitation = invitation
+                )
+            }
+        }
+    else LazyColumn(
         modifier = Modifier
-            .wrapContentHeight()
-            .padding(top = 16.dp, bottom = 16.dp)
+            .wrapContentWidth(Alignment.CenterHorizontally)
     ) {
         itemsIndexed(listInvitations) { _, invitation ->
             CardInvitation(

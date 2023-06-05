@@ -1,5 +1,8 @@
 package it.polito.mad.court
 
+import android.app.Activity
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -13,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -35,6 +39,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import it.polito.mad.court.composable.ButtonDatePicker
@@ -74,6 +80,8 @@ class ViewReservations : ComponentActivity() {
 @Composable
 fun PageViewReservations(user: User = User()) {
 
+    val isUsingLandscape =
+        LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val listReservations = remember { mutableStateOf<List<Reservation>>(listOf()) }
     val selectedReservation = remember { mutableStateOf(Reservation()) }
     val selectedDate = remember { mutableStateOf(LocalDate.now()) }
@@ -82,6 +90,8 @@ fun PageViewReservations(user: User = User()) {
     val showRatingDialog = remember { mutableStateOf(false) }
     val showInviteDialog = remember { mutableStateOf(false) }
     var toggleRefresh by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+//    (context as? Activity)?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
 
     fun toggleRefresh() {
         toggleRefresh = !toggleRefresh
@@ -90,14 +100,24 @@ fun PageViewReservations(user: User = User()) {
     LaunchedEffect(toggleRefresh, selectedDate.value) {
         DbCourt().getReservations { reservations ->
             listReservations.value = reservations.filter { res ->
-                res.date.date == DateString(selectedDate.value).date
+                res.date.date == DateString(selectedDate.value).date && res.players.map { it.email }
+                    .contains(user.email)
             }
         }
     }
 
+    LaunchedEffect(showDialog.value, showRatingDialog.value, showInviteDialog.value) {
+        if (showDialog.value || showRatingDialog.value || showInviteDialog.value) {
+            (context as? Activity)?.requestedOrientation =
+                ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        } else {
+            (context as? Activity)?.requestedOrientation =
+                ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+
     Scaffold(
-        floatingActionButtonPosition = FabPosition.End,
-        floatingActionButton = {
+        floatingActionButtonPosition = FabPosition.End, floatingActionButton = {
             Row {
                 FloatingActionButton(
                     onClick = {
@@ -113,8 +133,7 @@ fun PageViewReservations(user: User = User()) {
                         Icon(Icons.Filled.Add, contentDescription = "Add")
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            fontSize = 16.sp,
-                            text = "Add Reservation"
+                            fontSize = 16.sp, text = "Add Reservation"
                         )
                     }
                 }
@@ -122,37 +141,30 @@ fun PageViewReservations(user: User = User()) {
                 FloatingActionButton(
                     onClick = {
                         toggleRefresh()
-                    },
-                    modifier = Modifier
-                        .wrapContentWidth(),
-                    containerColor = Color.White
+                    }, modifier = Modifier.wrapContentWidth(), containerColor = Color.White
                 ) {
                     Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
                 }
             }
-        }
-    )
-    {
+        }) {
         Column(
             modifier = Modifier
-                .fillMaxHeight(0.9F)
+                .fillMaxHeight()
                 .padding(
-                    top = 16.dp,
-                    bottom = it.calculateBottomPadding(),
-                    start = 16.dp,
-                    end = 16.dp
+                    top = 16.dp, bottom = it.calculateBottomPadding(), start = 16.dp, end = 16.dp
                 )
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                PageTitle("Reservations")
-            }
+            if (!isUsingLandscape)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    PageTitle("Reservations")
+                }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentWidth(Alignment.CenterHorizontally)
-                    .padding(vertical = 16.dp)
+                    .padding(16.dp)
             ) {
                 ButtonDatePicker(selectedDate = selectedDate.value) { date ->
                     selectedDate.value = date
@@ -172,34 +184,34 @@ fun PageViewReservations(user: User = User()) {
                     .wrapContentWidth(Alignment.CenterHorizontally)
             ) {
                 if (showDialog.value) {
-                    DialogReservationForm(
-                        res = selectedReservation.value,
+                    DialogReservationForm(res = selectedReservation.value,
                         user = user,
                         onDismiss = {
                             showDialog.value = false
                             toggleRefresh()
-                        }
-                    )
+                        })
                 }
                 if (showRatingDialog.value) {
-                    DialogComment(
-                        user = user,
-                        res = selectedReservation.value,
-                        onConfirmClick = {
-                            showRatingDialog.value = false
-                            toggleRefresh()
-                        },
-                        onDismiss = {
-                            showRatingDialog.value = false
-                            toggleRefresh()
-                        }
-                    )
+                    DialogComment(user = user, res = selectedReservation.value, onConfirmClick = {
+                        showRatingDialog.value = false
+                        toggleRefresh()
+                    }, onDismiss = {
+                        showRatingDialog.value = false
+                        toggleRefresh()
+                    })
                 }
                 if (showInviteDialog.value) {
                     DialogInvitation(
                         emailList = selectedUsers,
-                        onClickInvite = {
+                        onClickInvite = { showWarning, warning ->
                             selectedUsers.value.forEach { receiver ->
+                                if (selectedReservation.value.players.map { p -> p.email }
+                                        .contains(receiver.email)) {
+                                    warning.value =
+                                        "User ${receiver.email} is already in the reservation"
+                                    showWarning.value = true
+                                    return@DialogInvitation
+                                }
                                 val inv = Invitation(
                                     sender = user,
                                     receiver = receiver,
@@ -217,13 +229,40 @@ fun PageViewReservations(user: User = User()) {
                         onClickCancel = {
                             selectedUsers.value = mutableListOf(User())
                             showInviteDialog.value = false
-                        }
-                    )
+                        })
                 }
             }
         }
     }
 }
+
+@Composable
+fun CardReservations(
+    res: Reservation,
+    selectedReservation: MutableState<Reservation>,
+    showDialog: MutableState<Boolean>,
+    showRatingDialog: MutableState<Boolean>,
+    showInviteDialog: MutableState<Boolean>,
+    toggleRefresh: () -> Unit
+) {
+    CardReservation(res = res, onInviteClick = {
+        selectedReservation.value = res
+        showInviteDialog.value = true
+        toggleRefresh()
+    }, onModifyClick = {
+        selectedReservation.value = res
+        showDialog.value = true
+        toggleRefresh()
+    }, onRemoveClick = {
+        DbCourt().deleteReservation(res)
+        toggleRefresh()
+    }, onRatingClick = {
+        selectedReservation.value = res
+        showRatingDialog.value = true
+        toggleRefresh()
+    })
+}
+
 
 @Composable
 fun RowCardReservations(
@@ -234,33 +273,38 @@ fun RowCardReservations(
     showInviteDialog: MutableState<Boolean>,
     toggleRefresh: () -> Unit
 ) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .wrapContentWidth(Alignment.CenterHorizontally)
-    ) {
-        itemsIndexed(listReservations) { _, res ->
-            CardReservation(
-                res = res,
-                onInviteClick = {
-                    selectedReservation.value = res
-                    showInviteDialog.value = true
-                    toggleRefresh()
-                },
-                onModifyClick = {
-                    selectedReservation.value = res
-                    showDialog.value = true
-                    toggleRefresh()
-                },
-                onRemoveClick = {
-                    DbCourt().deleteReservation(res)
-                    toggleRefresh()
-                },
-                onRatingClick = {
-                    selectedReservation.value = res
-                    showRatingDialog.value = true
-                    toggleRefresh()
-                })
+    val modifier = Modifier
+        .fillMaxSize()
+
+    if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+        LazyRow(
+            modifier = modifier
+        ) {
+            itemsIndexed(listReservations) { _, res ->
+                CardReservations(
+                    res = res,
+                    selectedReservation = selectedReservation,
+                    showDialog = showDialog,
+                    showRatingDialog = showRatingDialog,
+                    showInviteDialog = showInviteDialog,
+                    toggleRefresh = toggleRefresh
+                )
+            }
+        }
+    } else {
+        LazyColumn(
+            modifier = modifier
+        ) {
+            itemsIndexed(listReservations) { _, res ->
+                CardReservations(
+                    res = res,
+                    selectedReservation = selectedReservation,
+                    showDialog = showDialog,
+                    showRatingDialog = showRatingDialog,
+                    showInviteDialog = showInviteDialog,
+                    toggleRefresh = toggleRefresh
+                )
+            }
         }
     }
 }

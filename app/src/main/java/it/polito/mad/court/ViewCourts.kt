@@ -1,5 +1,6 @@
 package it.polito.mad.court
 
+import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
@@ -27,8 +29,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import it.polito.mad.court.composable.CardCourt
 import it.polito.mad.court.composable.PageTitle
@@ -57,6 +61,8 @@ class ViewCourts : ComponentActivity() {
 @Composable
 fun PageViewCourts(user: User = User()) {
 
+    val isUsingLandscape =
+        LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val listCourts = remember { mutableStateOf<List<Court>>(listOf()) }
     var toggleRefresh by remember { mutableStateOf(false) }
 
@@ -88,25 +94,28 @@ fun PageViewCourts(user: User = User()) {
                 }
             }
         })
-    {
+    { it ->
         Column(
             modifier = Modifier
                 .fillMaxHeight()
                 .padding(
                     top = 16.dp,
+                    bottom = it.calculateBottomPadding(),
                     start = 16.dp,
-                    end = 16.dp,
-                    bottom = it.calculateBottomPadding()
+                    end = 16.dp
                 )
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                PageTitle("Courts")
-            }
+            if (!isUsingLandscape)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    PageTitle("Courts")
+                }
             Row(
                 modifier = Modifier
                     .fillMaxSize()
+                    .wrapContentWidth(Alignment.CenterHorizontally)
+                    .padding(16.dp)
             ) {
                 RowCardCourts(
                     user = user,
@@ -122,16 +131,26 @@ fun RowCardCourts(
     user: User,
     listCourts: List<Court>,
 ) {
-    LazyColumn(
-        modifier = Modifier
-            .wrapContentHeight()
-            .padding(top = 16.dp, bottom = 16.dp)
-    ) {
-        itemsIndexed(listCourts) { _, court ->
-            CardCourt(
-                user = user,
-                court = court
-            )
+    if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE)
+        LazyRow(
+            modifier = Modifier.wrapContentHeight(Alignment.Top)
+        ) {
+            itemsIndexed(listCourts) { _, court ->
+                CardCourt(
+                    user = user,
+                    court = court
+                )
+            }
         }
-    }
+    else
+        LazyColumn(
+            modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally)
+        ) {
+            itemsIndexed(listCourts) { _, court ->
+                CardCourt(
+                    user = user,
+                    court = court
+                )
+            }
+        }
 }

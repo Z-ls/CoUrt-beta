@@ -1,5 +1,6 @@
 package it.polito.mad.court.composable
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.TweenSpec
@@ -10,9 +11,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
@@ -20,14 +23,17 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults.cardColors
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -36,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -51,6 +58,7 @@ import java.time.LocalTime
 @Composable
 fun CardCourt(user: User, court: Court) {
     var rating by remember { mutableFloatStateOf(court.rating) }
+    val myRating = remember { mutableIntStateOf(court.myRating) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var selectedTime by remember { mutableStateOf(LocalTime.now()) }
     var valid by remember { mutableStateOf<Boolean?>(null) }
@@ -72,19 +80,31 @@ fun CardCourt(user: User, court: Court) {
         )
     )
 
-    Card(
-        modifier = Modifier
-            .padding(vertical = 8.dp)
-            .fillMaxWidth()
+    val cardModifier =
+        if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE)
+            Modifier
+                .fillMaxHeight()
+                .padding(8.dp)
+                .width(300.dp)
+                .clickable(onClick = onClick)
+        else Modifier
+            .padding(8.dp)
             .clickable(onClick = onClick)
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.basketball_indoor),
-            contentDescription = null,
-            modifier = Modifier
-                .fillMaxWidth(),
-            contentScale = ContentScale.Crop
+
+    Card(
+        modifier = cardModifier,
+        colors = cardColors(
+            containerColor = Color(0xEDF2F2F2),
         )
+    ) {
+        if (LocalConfiguration.current.orientation !== Configuration.ORIENTATION_LANDSCAPE)
+            Image(
+                painter = painterResource(id = R.drawable.basketball_indoor),
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth(),
+                contentScale = ContentScale.FillWidth
+            )
         Column(
             modifier = Modifier
                 .padding(16.dp)
@@ -105,7 +125,7 @@ fun CardCourt(user: User, court: Court) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "${rating}/5",
+                    text = "$rating / 5",
                     style = MaterialTheme.typography.titleMedium,
                     fontStyle = FontStyle.Italic,
                     fontWeight = FontWeight.Bold
@@ -142,7 +162,9 @@ fun CardCourt(user: User, court: Court) {
                     fontWeight = FontWeight.Bold
                 )
             }
-            AnimatedVisibility(visible = isExpanded) {
+            AnimatedVisibility(
+                visible = isExpanded
+            ) {
                 Column {
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
@@ -165,7 +187,7 @@ fun CardCourt(user: User, court: Court) {
                     ) {
                         Text(
                             textAlign = TextAlign.End,
-                            text = court.comment,
+                            text = court.comment.let { if (it == "null") "" else it },
                             style = MaterialTheme.typography.titleMedium,
                             fontStyle = FontStyle.Italic,
                             fontWeight = FontWeight.Bold
@@ -176,6 +198,7 @@ fun CardCourt(user: User, court: Court) {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         CourtActionButtonRow(
+                            court = court,
                             onCheckClick = {
                                 isCheckInExpanded = !isCheckInExpanded
                             },
@@ -187,8 +210,8 @@ fun CardCourt(user: User, court: Court) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.End
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
                             ButtonDatePicker(selectedDate = selectedDate) {
                                 selectedDate = it
@@ -232,18 +255,22 @@ fun CardCourt(user: User, court: Court) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 8.dp),
+                                .padding(vertical = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             RatingStars(
-                                currRating = rating,
+                                currRating = myRating,
                                 onRatingClick = { index ->
+                                    court.myRating = index
                                     DbCourt().addOrUpdateRating(
                                         user = user,
                                         court = court,
-                                        rating = index
+                                        myRating = index
                                     )
-                                    DbCourt().getRating(court = court) { rating = index.toFloat() }
+                                    DbCourt().getRating(court = court) {
+                                        myRating.value = index
+                                        rating = it
+                                    }
                                 })
                         }
                     }
@@ -256,13 +283,14 @@ fun CardCourt(user: User, court: Court) {
 
 @Composable
 fun CourtActionButtonRow(
+    court: Court,
     onCheckClick: () -> Unit,
     onRatingClick: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.End
+        horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         IconButton(
             onClick = onCheckClick,
@@ -282,7 +310,9 @@ fun CourtActionButtonRow(
             Icon(
                 imageVector = Icons.Filled.Star,
                 contentDescription = "Rating",
-                tint = Color.Gray
+                tint = court.myRating.let {
+                    if (it == 0) Color.Gray else Color.Yellow
+                },
             )
         }
     }
@@ -290,21 +320,23 @@ fun CourtActionButtonRow(
 
 @Composable
 fun RatingStars(
-    currRating: Float,
+    currRating: MutableState<Int>,
     onRatingClick: (Int) -> Unit
 ) {
-    var ratings by remember { mutableFloatStateOf(currRating) }
 
-    Row {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
         repeat(5) { index ->
-            val filled = index < ratings
+            val filled = index < currRating.value
             val starIcon = if (filled) Icons.Filled.Star else Icons.Outlined.Star
             val starColor = if (filled) Color.Yellow else Color.Gray
             IconToggleButton(
                 checked = filled,
                 onCheckedChange = {
                     onRatingClick(index + 1)
-                    ratings = index + 1F
+                    currRating.value = index + 1
                 },
                 modifier = Modifier.padding(end = 4.dp)
             ) {

@@ -19,4 +19,6 @@ data class Court(
     var description: String = "",
     var isOutdoor: Boolean = false,
     var comment: String = "",
+    var myRating: Int = 0
 )
+

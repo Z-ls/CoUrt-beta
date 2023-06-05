@@ -1,27 +1,52 @@
 package com.example.lab4
 
 
+import android.app.Activity
+import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
+import android.view.ContextMenu
 import android.view.LayoutInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.MutableLiveData
 import it.polito.mad.court.DbCourt
+import it.polito.mad.court.SharedPreferencesHelper
 import it.polito.mad.court.dataclass.User
 
 
 class Fragment5 : Fragment() {
 
     private var listener: Fragment5Listener? = null
+    private var cameraActivityResultLauncher: ActivityResultLauncher<Intent> =
+        registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) {
+            if (it.resultCode == Activity.RESULT_OK) {
+                val profilePic = requireView().findViewById<ImageView>(R.id.profile_image)
+                profilePic?.setImageURI(imageUri)
+            }
+        }
+    private var imageUri: Uri = Uri.EMPTY
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -37,7 +62,6 @@ class Fragment5 : Fragment() {
         listener = null
     }
 
-    // Call this method when you want to switch to Fragment1
     private fun switchToFragment4() {
         listener?.switchToFragment4()
     }
@@ -47,28 +71,41 @@ class Fragment5 : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val view: View = inflater.inflate(R.layout.page4_edit, container, false)
-        val user: MutableLiveData<User> = MutableLiveData()
-        user.observe(viewLifecycleOwner) {
-            view.findViewById<EditText>(R.id.profile_fullname).setText(it.nickname)
-            view.findViewById<EditText>(R.id.profile_location).setText(it.city)
-            view.findViewById<EditText>(R.id.profile_phone_number).setText(it.phone)
-            interestSelector(it, view)
-        }
-        DbCourt().getUserByEmail("test@gmail.com") {
-            user.value = it
-        }
+        val user = SharedPreferencesHelper.getUserData(requireContext())
+        val view: View = inflater.inflate(R.layout.page4_edit, null)!!
+        if (user.image.isNotEmpty())
+            view.findViewById<ImageView>(R.id.profile_image).setImageURI(user.image.toUri())
+        view.findViewById<TextView>(R.id.profile_username).text = user.email
+        view.findViewById<EditText>(R.id.profile_fullName).setText(user.nickname)
+        view.findViewById<EditText>(R.id.profile_location).setText(user.city)
+        view.findViewById<EditText>(R.id.profile_phone_number).setText(user.phone)
+
+        interestSelector(user, view)
         val btnSave = view.findViewById<Button>(R.id.edit_save_button)
         btnSave?.setOnClickListener {
-            onSave(User(), view)
-            switchToNextView()
+            onSave(user, view)
         }
         val btnCancel = view.findViewById<Button>(R.id.edit_cancel_button)
         btnCancel?.setOnClickListener {
             switchToNextView()
         }
+        val btnEditPic = view.findViewById<ImageButton>(R.id.image_button)
+        btnEditPic.setOnClickListener {
+            registerForContextMenu(btnEditPic)
+            requireActivity().openContextMenu(btnEditPic)
+        }
+        val profilePic = view.findViewById<ImageView>(R.id.profile_image)
+        cameraActivityResultLauncher =
+            registerForActivityResult(
+                ActivityResultContracts.StartActivityForResult()
+            ) {
+                if (it.resultCode == Activity.RESULT_OK) {
+                    profilePic?.setImageURI(imageUri)
+                }
+            }
         return view
     }
+
 
     private fun switchToNextView() {
         parentFragmentManager.beginTransaction()
@@ -79,13 +116,15 @@ class Fragment5 : Fragment() {
     }
 
     private fun onSave(user: User, view: View) {
-        user.email = "test@gmail.com"
-        user.nickname = view.findViewById<EditText>(R.id.profile_fullname).text.toString()
+        user.email = user.email
+        user.image = if (imageUri !== Uri.EMPTY) imageUri.toString() else user.image
+        user.nickname = view.findViewById<EditText>(R.id.profile_fullName).text.toString()
         user.city = view.findViewById<EditText>(R.id.profile_location).text.toString()
         user.phone = view.findViewById<EditText>(R.id.profile_phone_number).text.toString()
         user.sportList = getSportList(view)
-
-        DbCourt().updateUser(user)
+        DbCourt().updateUser(user) {
+            switchToNextView()
+        }
     }
 
     private fun getSportList(view: View): List<Pair<String, Int>> {
@@ -116,7 +155,8 @@ class Fragment5 : Fragment() {
                     android.R.layout.simple_spinner_dropdown_item,
                     listOf("Not Interested", "Beginner", "Intermediate", "Advanced")
                 )
-                val skillLevelIndex = user.sportList.firstOrNull { pair -> pair.first == it }?.second ?: 0
+                val skillLevelIndex =
+                    user.sportList.firstOrNull { pair -> pair.first == it }?.second ?: 0
                 spSkillLevel.setSelection(skillLevelIndex)
                 spSkillLevel.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                     override fun onItemSelected(
@@ -140,6 +180,74 @@ class Fragment5 : Fragment() {
                 llInterestItem.addView(spSkillLevel)
                 llProfileInterests.addView(llInterestItem)
             }
+    }
+
+
+    private fun checkPerm(cb: () -> Any?) {
+        val cameraPermission = android.Manifest.permission.CAMERA
+
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                cameraPermission
+            ) == PackageManager.PERMISSION_DENIED
+        ) {
+            val permission = arrayOf(
+                cameraPermission
+            )
+            requestPermissions(permission, 112)
+        } else {
+            cb()
+        }
+    }
+
+    private fun openCamera() {
+        val values = ContentValues()
+        values.put(MediaStore.Images.Media.TITLE, "New Picture")
+        values.put(MediaStore.Images.Media.DESCRIPTION, "From the Camera")
+        imageUri = requireActivity().contentResolver.insert(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            values
+        )!!
+        val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri)
+        cameraActivityResultLauncher.launch(cameraIntent)
+    }
+
+
+    private val galleryActivityResultLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        )
+        {
+            val profilePic = view?.findViewById<ImageView>(R.id.profile_image)
+            if (it.resultCode == AppCompatActivity.RESULT_OK) {
+                imageUri = it.data?.data!!
+                profilePic?.setImageURI(imageUri)
+            }
+        }
+
+    override fun onCreateContextMenu(
+        menu: ContextMenu,
+        v: View,
+        menuInfo: ContextMenu.ContextMenuInfo?
+    ) {
+        super.onCreateContextMenu(menu, v, menuInfo)
+        requireActivity().menuInflater.inflate(R.menu.photo_menu, menu)
+    }
+
+    override fun onContextItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.take_photo -> {
+                checkPerm { openCamera() }
+            }
+
+            R.id.choose_from_gallery -> {
+                val galleryIntent =
+                    Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                galleryActivityResultLauncher.launch(galleryIntent)
+            }
+        }
+        return super.onContextItemSelected(item)
     }
 }
 

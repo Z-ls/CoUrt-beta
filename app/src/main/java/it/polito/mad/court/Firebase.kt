@@ -1,7 +1,10 @@
 package it.polito.mad.court
 
+import androidx.core.net.toUri
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageReference
 import com.google.gson.Gson
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
@@ -14,6 +17,7 @@ import it.polito.mad.court.dataclass.Invitation
 import it.polito.mad.court.dataclass.InvitationStatus
 import it.polito.mad.court.dataclass.Reservation
 import it.polito.mad.court.dataclass.User
+import java.io.File
 import java.lang.reflect.Type
 import java.time.LocalDate
 import java.time.LocalTime
@@ -21,9 +25,7 @@ import java.time.format.DateTimeFormatter
 
 class LocalDateSerializer : JsonSerializer<LocalDate> {
     override fun serialize(
-        src: LocalDate?,
-        typeOfSrc: Type?,
-        context: JsonSerializationContext?
+        src: LocalDate?, typeOfSrc: Type?, context: JsonSerializationContext?
     ): JsonElement {
         val formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy")
         return JsonPrimitive(src?.format(formatter))
@@ -32,9 +34,7 @@ class LocalDateSerializer : JsonSerializer<LocalDate> {
 
 class LocalDateDeserializer : JsonDeserializer<LocalDate> {
     override fun deserialize(
-        json: JsonElement?,
-        typeOfT: Type?,
-        context: JsonDeserializationContext?
+        json: JsonElement?, typeOfT: Type?, context: JsonDeserializationContext?
     ): LocalDate {
         val formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy")
         return LocalDate.parse(json?.asString, formatter)
@@ -43,9 +43,7 @@ class LocalDateDeserializer : JsonDeserializer<LocalDate> {
 
 class LocalTimeSerializer : JsonSerializer<LocalTime> {
     override fun serialize(
-        src: LocalTime?,
-        typeOfSrc: Type?,
-        context: JsonSerializationContext?
+        src: LocalTime?, typeOfSrc: Type?, context: JsonSerializationContext?
     ): JsonElement {
         val formatter = DateTimeFormatter.ofPattern("HH:mm")
         return JsonPrimitive(src?.format(formatter))
@@ -54,9 +52,7 @@ class LocalTimeSerializer : JsonSerializer<LocalTime> {
 
 class LocalTimeDeserializer : JsonDeserializer<LocalTime> {
     override fun deserialize(
-        json: JsonElement?,
-        typeOfT: Type?,
-        context: JsonDeserializationContext?
+        json: JsonElement?, typeOfT: Type?, context: JsonDeserializationContext?
     ): LocalTime {
         val formatter = DateTimeFormatter.ofPattern("HH:mm")
         return LocalTime.parse(json?.asString, formatter)
@@ -65,18 +61,23 @@ class LocalTimeDeserializer : JsonDeserializer<LocalTime> {
 
 @Suppress("unused")
 class DbCourt {
-    private val gson = Gson().newBuilder()
-        .registerTypeAdapter(LocalDate::class.java, LocalDateSerializer())
-        .registerTypeAdapter(LocalDate::class.java, LocalDateDeserializer())
-        .registerTypeAdapter(LocalTime::class.java, LocalTimeSerializer())
-        .registerTypeAdapter(LocalTime::class.java, LocalTimeDeserializer())
-        .create()
+    private val gson =
+        Gson().newBuilder().registerTypeAdapter(LocalDate::class.java, LocalDateSerializer())
+            .registerTypeAdapter(LocalDate::class.java, LocalDateDeserializer())
+            .registerTypeAdapter(LocalTime::class.java, LocalTimeSerializer())
+            .registerTypeAdapter(LocalTime::class.java, LocalTimeDeserializer()).create()
     private var db = FirebaseDatabase.getInstance()
+    private var storage = FirebaseStorage.getInstance()
 
     private fun getReference(
         name: String,
     ): DatabaseReference {
         return db.getReference(name)
+    }
+
+    private fun getStorageReference(
+    ): StorageReference {
+        return storage.getReference("portraits")
     }
 
     fun getUsers(
@@ -103,10 +104,27 @@ class DbCourt {
             "users",
         )
         refs.child(emailToKey(email)).get().addOnSuccessListener {
-            val user = gson.fromJson(it.value.toString(), User::class.java)!!
-            callback(user)
+            if (it.value != null) {
+                val user = gson.fromJson(it.value.toString(), User::class.java)!!
+                getUserImagine(email) { file ->
+                    user.image = file.toUri().toString()
+                    callback(user)
+                }
+            }
         }
     }
+
+    fun getUserImagine(
+        email: String,
+        callback: (File) -> Unit,
+    ) {
+        val refs = getStorageReference()
+        val localFile = File.createTempFile("images", "jpg")
+        refs.child(emailToKey(email)).getFile(localFile).addOnCompleteListener {
+            callback(localFile)
+        }
+    }
+
 
     fun addUser(
         user: User,
@@ -114,17 +132,30 @@ class DbCourt {
         val refs = getReference(
             "users",
         )
-        user.email = emailToKey(user.email)
-        refs.push().setValue(gson.toJson(user))
+        refs.child(emailToKey(user.email)).setValue(gson.toJson(user))
     }
 
     fun updateUser(
         user: User,
+        callback: () -> Unit,
     ) {
         val refs = getReference(
             "users",
         )
+        val storageRefs = getStorageReference()
         refs.child(emailToKey(user.email)).setValue(gson.toJson(user))
+        storageRefs.child(emailToKey(user.email)).putFile(user.image.toUri())
+            .addOnSuccessListener {
+                callback()
+            }
+    }
+
+    fun addOrUpdateUserImagine(
+        email: String,
+        image: String,
+    ) {
+        val refs = getStorageReference()
+        refs.child(emailToKey(email)).putFile(image.toUri())
     }
 
     fun deleteUser(
@@ -134,15 +165,22 @@ class DbCourt {
             "users",
         )
         refs.child(emailToKey(user.email)).removeValue()
+        deleteUserImagine(user.email)
+    }
+
+    private fun deleteUserImagine(
+        email: String,
+    ) {
+        val refs = getStorageReference()
+        refs.child(emailToKey(email)).delete()
     }
 
     fun getReservations(
         callback: (List<Reservation>) -> Unit,
     ) {
-        val refs =
-            getReference(
-                "reservations",
-            )
+        val refs = getReference(
+            "reservations",
+        )
         refs.get().addOnSuccessListener {
             val reservations = mutableListOf<Reservation>()
             for (data in it.children) {
@@ -154,14 +192,33 @@ class DbCourt {
         }
     }
 
+    fun getReservationsByUser(
+        user: User,
+        callback: (List<Reservation>) -> Unit,
+    ) {
+        val refs = getReference(
+            "reservations",
+        )
+        refs.get().addOnSuccessListener {
+            val reservations = mutableListOf<Reservation>()
+            for (data in it.children) {
+                val res = gson.fromJson(data.value.toString(), Reservation::class.java)!!
+                res.id = data.key!!
+                if (res.players.map { p -> p.email }.contains(user.email)) {
+                    reservations.add(res)
+                }
+            }
+            callback(reservations)
+        }
+    }
+
     private fun getReservationById(
         id: String,
         callback: (Reservation) -> Unit,
     ) {
-        val refs =
-            getReference(
-                "reservations",
-            )
+        val refs = getReference(
+            "reservations",
+        )
         refs.child(id).get().addOnSuccessListener {
             callback(gson.fromJson(it.value.toString(), Reservation::class.java)!!)
         }
@@ -172,10 +229,9 @@ class DbCourt {
         date: LocalDate,
         callback: (List<Reservation>) -> Unit,
     ) {
-        val refs =
-            getReference(
-                "reservations",
-            )
+        val refs = getReference(
+            "reservations",
+        )
         refs.get().addOnSuccessListener {
             val reservations = mutableListOf<Reservation>()
             for (data in it.children) {
@@ -190,25 +246,21 @@ class DbCourt {
     }
 
     fun addReservation(
-        user: User,
-        reservation: Reservation
+        user: User, reservation: Reservation
     ) {
-        val refs =
-            getReference(
-                "reservations",
-            )
+        val refs = getReference(
+            "reservations",
+        )
         reservation.players.add(user)
         refs.push().setValue(gson.toJson(reservation))
     }
 
     private fun participateReservation(
-        user: User,
-        reservation: Reservation
+        user: User, reservation: Reservation
     ): Boolean {
-        val refs =
-            getReference(
-                "reservations",
-            )
+        val refs = getReference(
+            "reservations",
+        )
         return if (reservation.players.size < reservation.maxPlayers) {
             reservation.players.add(user)
             reservation.numPlayers = reservation.players.size
@@ -222,20 +274,18 @@ class DbCourt {
     fun updateReservation(
         reservation: Reservation,
     ) {
-        val refs =
-            getReference(
-                "reservations",
-            )
+        val refs = getReference(
+            "reservations",
+        )
         refs.child(reservation.id).setValue(gson.toJson(reservation))
     }
 
     fun deleteReservation(
         reservation: Reservation,
     ) {
-        val refs =
-            getReference(
-                "reservations",
-            )
+        val refs = getReference(
+            "reservations",
+        )
         refs.child(reservation.id).removeValue()
         getInvitations {
             for (item in it) {
@@ -265,9 +315,9 @@ class DbCourt {
                     val start = itemRes.time.time
                     val end = start.plusHours(itemRes.duration.toLong())
                     val newEnd = time.plusMinutes(duration.toLong())
-                    if ((time.isAfter(start) && time.isBefore(end)) ||
-                        (newEnd.isAfter(start) && newEnd.isBefore(end)) ||
-                        (time.isBefore(start) && newEnd.isAfter(end))
+                    if ((time.isAfter(start) && time.isBefore(end)) || (newEnd.isAfter(start) && newEnd.isBefore(
+                            end
+                        )) || (time.isBefore(start) && newEnd.isAfter(end))
                     ) {
                         available = false
                         break
@@ -279,14 +329,11 @@ class DbCourt {
     }
 
     private fun getCommentByCourtNameAndUser(
-        court: Court,
-        user: User,
-        callback: (String) -> Unit
+        court: Court, user: User, callback: (String) -> Unit
     ) {
-        val refs =
-            getReference(
-                "comments",
-            )
+        val refs = getReference(
+            "comments",
+        )
         refs.child(court.name).child(emailToKey(user.email)).get().addOnSuccessListener {
             callback(it.value.toString())
         }
@@ -297,22 +344,18 @@ class DbCourt {
         reservation: Reservation,
         comment: String,
     ) {
-        val refs =
-            getReference(
-                "comments",
-            )
-        refs.child(reservation.court.name).child(emailToKey(user.email))
-            .setValue(comment)
+        val refs = getReference(
+            "comments",
+        )
+        refs.child(reservation.court.name).child(emailToKey(user.email)).setValue(comment)
     }
 
     fun searchCourtByName(
-        name: String,
-        callback: (List<Court>) -> Unit
+        name: String, callback: (List<Court>) -> Unit
     ) {
-        val refs =
-            getReference(
-                "courts",
-            )
+        val refs = getReference(
+            "courts",
+        )
         refs.get().addOnSuccessListener { dataSnapshot ->
             var results = listOf<Court>()
             if (dataSnapshot.exists()) {
@@ -327,13 +370,11 @@ class DbCourt {
     }
 
     fun searchUserByEmail(
-        email: String,
-        callback: (List<User>) -> Unit
+        email: String, callback: (List<User>) -> Unit
     ) {
-        val refs =
-            getReference(
-                "users",
-            )
+        val refs = getReference(
+            "users",
+        )
         refs.get().addOnSuccessListener { dataSnapshot ->
             var results = listOf<User>()
             if (dataSnapshot.exists()) {
@@ -351,16 +392,18 @@ class DbCourt {
         user: User,
         callback: (List<Court>) -> Unit,
     ) {
-        val refs =
-            getReference(
-                "courts",
-            )
+        val refs = getReference(
+            "courts",
+        )
         refs.get().addOnSuccessListener {
             val courts = mutableListOf<Court>()
             for (data in it.children) {
                 val court = gson.fromJson(data.value.toString(), Court::class.java)!!
                 getRating(court) { rating ->
                     court.rating = rating
+                }
+                getRatingByUser(user, court) { rating ->
+                    court.myRating = rating
                 }
                 getCommentByCourtNameAndUser(court, user) { comment ->
                     if (comment != "") {
@@ -376,10 +419,9 @@ class DbCourt {
     }
 
     fun getCourtByName(name: String, callback: (Court) -> Unit) {
-        val refs =
-            getReference(
-                "courts",
-            )
+        val refs = getReference(
+            "courts",
+        )
         refs.child(name).get().addOnSuccessListener {
             val court = gson.fromJson(it.value.toString(), Court::class.java)!!
             callback(court)
@@ -389,10 +431,9 @@ class DbCourt {
     fun addCourt(
         court: Court,
     ) {
-        val refs =
-            getReference(
-                "courts",
-            )
+        val refs = getReference(
+            "courts",
+        )
         refs.push().setValue(gson.toJson(court))
     }
 
@@ -400,10 +441,9 @@ class DbCourt {
     private fun updateCourt(
         court: Court,
     ) {
-        val refs =
-            getReference(
-                "courts",
-            )
+        val refs = getReference(
+            "courts",
+        )
         refs.child(court.name).setValue(gson.toJson(court))
     }
 
@@ -411,10 +451,9 @@ class DbCourt {
         court: Court,
         callback: (Float) -> Unit,
     ) {
-        val refs =
-            getReference(
-                "ratings",
-            )
+        val refs = getReference(
+            "ratings",
+        )
         refs.child(court.name).get().addOnSuccessListener {
             if (!it.exists()) {
                 callback(0f)
@@ -430,34 +469,31 @@ class DbCourt {
         }
     }
 
-    fun getRatingByUser(
+    private fun getRatingByUser(
         user: User,
         court: Court,
         callback: (Int) -> Unit,
     ) {
-        val refs =
-            getReference(
-                "ratings",
-            )
+        val refs = getReference(
+            "ratings",
+        )
         refs.child(court.name).child(emailToKey(user.email)).get().addOnSuccessListener {
-            if (!it.exists()) {
+            if (it.value == null) {
                 callback(0)
                 return@addOnSuccessListener
-            }
-            callback(it.value.toString().toInt())
+            } else callback(it.value.toString().toInt())
         }
     }
 
     fun addOrUpdateRating(
         user: User,
         court: Court,
-        rating: Int,
+        myRating: Int,
     ) {
-        val refs =
-            getReference(
-                "ratings",
-            )
-        refs.child(court.name).child(emailToKey(user.email)).setValue(rating.toString())
+        val refs = getReference(
+            "ratings",
+        )
+        refs.child(court.name).child(emailToKey(user.email)).setValue(myRating.toString())
         val refsCourt = getReference("courts")
         refsCourt.child(court.name).get().addOnSuccessListener {
             val c = gson.fromJson(it.value.toString(), Court::class.java)!!
@@ -471,10 +507,9 @@ class DbCourt {
     private fun getInvitations(
         callback: (List<Invitation>) -> Unit
     ) {
-        val refs =
-            getReference(
-                "invitations",
-            )
+        val refs = getReference(
+            "invitations",
+        )
         refs.get().addOnSuccessListener {
             if (!it.exists()) {
                 return@addOnSuccessListener
@@ -490,26 +525,22 @@ class DbCourt {
     }
 
     fun getInvitationsByRole(
-        email: String,
-        bySender: Boolean,
-        callback: (List<Invitation>) -> Unit
+        email: String, bySender: Boolean, callback: (List<Invitation>) -> Unit
     ) {
-        val refs =
-            getReference(
-                "invitations",
-            )
-        val dataSnapshot = when (bySender) {
-            true -> refs.get()
-            false -> refs.child(emailToKey(email)).get()
-        }
-        dataSnapshot.addOnSuccessListener {
+        val refs = getReference(
+            "invitations",
+        )
+        refs.get().addOnSuccessListener {
             if (!it.exists()) {
                 return@addOnSuccessListener
             }
             val invitations = mutableListOf<Invitation>()
-            it.children.iterator().forEach { data ->
+            it.children.forEach { data ->
                 val invitation = gson.fromJson(data.value.toString(), Invitation::class.java)!!
-                val isFetchingBySender = !(invitation.sender?.email !== email && bySender)
+                val isFetchingBySender = when (bySender) {
+                    true -> invitation.sender?.email == email
+                    false -> invitation.receiver?.email == email
+                }
                 if (isFetchingBySender) {
                     invitation.id = data.key
                     if (invitation.reservation?.players?.contains(invitation.receiver) == true) {
@@ -523,58 +554,50 @@ class DbCourt {
     }
 
     fun addInvitation(
-        invitation: Invitation,
-        callback: (List<Invitation>) -> Unit
+        invitation: Invitation, callback: (List<Invitation>) -> Unit
     ) {
-        val refs =
-            getReference(
-                "invitations",
-            )
-        refs.child(emailToKey(invitation.receiver?.email!!)).push()
-            .setValue(gson.toJson(invitation)).addOnSuccessListener {
-                getInvitationsByRole(invitation.receiver!!.email, bySender = true) { invitations ->
-                    callback(invitations)
-                }
+        val refs = getReference(
+            "invitations",
+        )
+        refs.push().setValue(gson.toJson(invitation)).addOnSuccessListener {
+            getInvitationsByRole(invitation.receiver!!.email, bySender = true) { invitations ->
+                callback(invitations)
             }
+        }
     }
 
     fun acceptInvitation(
         user: User,
         invitation: Invitation,
     ): Pair<Boolean, String> {
-        val refs =
-            getReference(
-                "invitations",
-            )
+        val refs = getReference(
+            "invitations",
+        )
         if (participateReservation(user, invitation.reservation!!)) {
-            refs.child(emailToKey(user.email)).child(invitation.id!!)
-                .setValue(gson.toJson(invitation))
+            refs.child(invitation.id!!).setValue(gson.toJson(invitation))
         } else return Pair(false, "The invitation is invalid or full")
         invitation.status = InvitationStatus.ACCEPTED
-        refs.child(emailToKey(user.email)).child(invitation.id!!).setValue(gson.toJson(invitation))
+        refs.child(invitation.id!!).setValue(gson.toJson(invitation))
         return true to ""
     }
 
     fun declineInvitation(
-        user: User,
         invitation: Invitation,
     ) {
-        val refs =
-            getReference(
-                "invitations",
-            )
+        val refs = getReference(
+            "invitations",
+        )
         invitation.status = InvitationStatus.DECLINED
-        refs.child(emailToKey(user.email)).child(invitation.id!!).setValue(gson.toJson(invitation))
+        refs.child(invitation.id!!).setValue(gson.toJson(invitation))
     }
 
     private fun deleteInvitation(
         invitation: Invitation,
     ) {
-        val refs =
-            getReference(
-                "invitations",
-            )
-        refs.child(emailToKey(invitation.receiver?.email!!)).child(invitation.id!!).removeValue()
+        val refs = getReference(
+            "invitations",
+        )
+        refs.child(invitation.id!!).removeValue()
     }
 
     private fun emailToKey(email: String): String {

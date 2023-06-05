@@ -2,6 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/page4"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/constant_background_color"
@@ -10,7 +11,7 @@
     <LinearLayout
         android:id="@+id/ll_profile_all"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:layout_marginLeft="16dp"
         android:layout_marginRight="16dp"
         android:orientation="horizontal">
@@ -36,12 +37,13 @@
                     android:layout_width="150dp"
                     android:layout_height="150dp"
                     android:layout_gravity="center"
+                    android:contentDescription="@string/profile_image"
                     android:src="@drawable/profile_default" />
 
                 <LinearLayout
                     android:id="@+id/ll_profile_head_information"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="0dp"
                     android:layout_weight="1"
                     android:gravity="center|bottom"
                     android:orientation="vertical">
@@ -51,19 +53,18 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center_horizontal"
-                        android:text="erengul"
+                        android:text="@string/username"
                         android:textSize="@dimen/small_text_size"
                         android:textStyle="italic">
 
                     </TextView>
 
                     <TextView
-                        android:id="@+id/profile_fullname"
+                        android:id="@+id/profile_fullName"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center_horizontal"
-
-                        android:text="Eren Gul"
+                        android:text="@string/nickname"
                         android:textColor="@color/black"
                         android:textSize="@dimen/medium_text_size"
                         android:textStyle="bold">
@@ -82,7 +83,8 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:gravity="center|left"
-                            android:text="Torino, IT" />
+                            android:text="@string/location"
+                            tools:ignore="RtlHardcoded" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -90,14 +92,15 @@
                             android:gravity="center|left"
                             android:paddingLeft="10dp"
                             android:paddingRight="10dp"
-                            android:text="|" />
+                            android:text="@string/divider"
+                            tools:ignore="RtlHardcoded" />
 
                         <TextView
                             android:id="@+id/profile_joined_date"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:gravity="center"
-                            android:text="Joined March 2023" />
+                            android:text="@string/birthday" />
 
                     </LinearLayout>
 
@@ -110,7 +113,7 @@
             android:id="@+id/profile_down_card_view"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_marginLeft="16dp"
+            android:layout_marginStart="16dp"
             android:layout_weight="2"
             app:cardCornerRadius="20sp">
 
@@ -118,28 +121,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="20dp"
-
-                >
-
-                <TextView
-                    android:id="@+id/profile_description"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:text="CLICK THE PORTRAIT TO EDIT YOUR PROFILE"
-                    android:textAlignment="center"
-                    android:textColor="@color/black"
-                    android:textSize="15sp">
-
-                </TextView>
+                android:padding="20dp">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:paddingTop="10dp"
-                    android:text="Information"
+                    android:text="@string/information"
                     android:textColor="@color/black"
                     android:textSize="@dimen/medium_text_size"
                     android:textStyle="bold" />
@@ -151,14 +139,12 @@
                     android:background="@drawable/customborder"
                     android:orientation="horizontal"
                     android:paddingTop="20dp"
-                    android:paddingBottom="30dp"
-
-
-                    >
+                    android:paddingBottom="30dp">
 
                     <ImageView
                         android:layout_width="30dp"
                         android:layout_height="25dp"
+                        android:contentDescription="@string/phone_number"
                         android:src="@drawable/telephone">
 
                     </ImageView>
@@ -167,22 +153,24 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="top"
-                        android:paddingLeft="15dp"
+                        android:paddingStart="15dp"
 
-                        android:text="Phone"
-                        android:textSize="@dimen/small_text_size">
+                        android:text="@string/phone"
+                        android:textSize="@dimen/small_text_size"
+                        tools:ignore="RtlSymmetry">
 
                     </TextView>
 
                     <TextView
                         android:id="@+id/profile_phone_number"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:gravity="right"
-                        android:text="+90 531 6921923"
+                        android:text="@string/phone_number"
                         android:textColor="@color/black"
-                        android:textSize="@dimen/small_text_size">
+                        android:textSize="@dimen/small_text_size"
+                        tools:ignore="RtlHardcoded">
 
                     </TextView>
 
@@ -197,7 +185,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:paddingTop="20dp"
-                        android:text="Interests"
+                        android:text="@string/interests"
                         android:textColor="@color/black"
                         android:textSize="@dimen/medium_text_size"
                         android:textStyle="bold" />
@@ -206,32 +194,21 @@
                 </LinearLayout>
 
                 <LinearLayout
+                    android:id="@+id/ll_profile_interests"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_margin="10sp"
                     android:orientation="horizontal">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_margin="5sp"
-                        android:background="@drawable/chips"
-                        android:padding="7sp"
-                        android:text="Football">
+                    <!--                    <TextView-->
+                    <!--                        android:layout_width="wrap_content"-->
+                    <!--                        android:layout_height="wrap_content"-->
+                    <!--                        android:layout_margin="5sp"-->
+                    <!--                        android:background="@drawable/chips"-->
+                    <!--                        android:padding="7sp"-->
+                    <!--                        android:text="Football">-->
 
-                    </TextView>
-
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_margin="5sp"
-                        android:background="@drawable/chips"
-                        android:padding="7sp"
-                        android:text="Basketball">
-
-                    </TextView>
-
+                    <!--                    </TextView>-->
                 </LinearLayout>
             </LinearLayout>
 

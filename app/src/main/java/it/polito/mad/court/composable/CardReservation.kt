@@ -1,5 +1,6 @@
 package it.polito.mad.court.composable
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.TweenSpec
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -34,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -58,22 +61,31 @@ fun CardReservation(
         )
     )
 
+    val cardModifier =
+        if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE)
+            Modifier
+                .fillMaxHeight()
+                .padding(8.dp)
+                .width(300.dp)
+                .clickable(onClick = onClick)
+        else Modifier
+            .padding(8.dp)
+            .clickable(onClick = onClick)
+
     Card(
-        modifier = Modifier
-            .padding(16.dp)
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier = cardModifier,
         colors = cardColors(
             containerColor = Color(0xEDF2F2F2),
         )
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.basketball_indoor),
-            contentDescription = null,
-            modifier = Modifier
-                .fillMaxWidth(),
-            contentScale = androidx.compose.ui.layout.ContentScale.Crop
-        )
+        if (LocalConfiguration.current.orientation !== Configuration.ORIENTATION_LANDSCAPE)
+            Image(
+                painter = painterResource(id = R.drawable.basketball_indoor),
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth(),
+                contentScale = androidx.compose.ui.layout.ContentScale.FillWidth
+            )
         Column(
             modifier = Modifier
                 .padding(16.dp)
@@ -146,12 +158,27 @@ fun CardReservationAdditionalInfo(
             "Level",
             listOf("Beginner", "Intermediate", "Advanced")[res.skillLevel]
         )
+        RowParticipatedPlayers(res = res)
         ActionButtonRow(
             onInviteClick = onInviteClick,
             onModifyClick = onModifyClick,
             onRemoveClick = onRemoveClick,
             onRatingClick = onRatingClick,
         )
+    }
+}
+
+@Composable
+fun RowParticipatedPlayers(
+    res: Reservation,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Spacer(modifier = Modifier.height(8.dp))
+        res.players.forEachIndexed { index, it ->
+            ReservationDetailRow("Player #${index + 1}", it.nickname.let { nickname ->
+                nickname.ifEmpty { "Anonymous@${it.email.split("@")[0]}" }
+            })
+        }
     }
 }
 
@@ -183,8 +210,7 @@ fun ActionButtonRow(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.End
+        horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         IconButton(
             onClick = onInviteClick

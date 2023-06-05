@@ -12,16 +12,27 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toDrawable
+import androidx.core.net.toUri
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.MutableLiveData
 import it.polito.mad.court.DbCourt
+import it.polito.mad.court.SharedPreferencesHelper
 import it.polito.mad.court.dataclass.User
 
 
-class Fragment4 : Fragment(
-) {
+class Fragment4 : Fragment() {
 
     private var listener: Fragment4Listener? = null
+    private var user = MutableLiveData<User>()
+
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        if (!hidden) {
+            DbCourt().getUserByEmail(SharedPreferencesHelper.getUserData(requireContext()).email) {
+                user.value = it
+            }
+        }
+    }
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -37,18 +48,29 @@ class Fragment4 : Fragment(
         listener = null
     }
 
+    private fun switchToFragment5() {
+        listener?.switchToFragment5()
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         val view: View = inflater.inflate(R.layout.page4, null)
-        val user: MutableLiveData<User> = MutableLiveData()
-        DbCourt().getUserByEmail("test@gmail.com") {
+        DbCourt().getUserByEmail(SharedPreferencesHelper.getUserData(requireContext()).email) {
             user.value = it
-            view.findViewById<TextView>(R.id.profile_fullname).text = it.nickname.uppercase()
+        }
+        user.observe(viewLifecycleOwner) {
+            if (it.image.isNotEmpty())
+                DbCourt().getUserImagine(it.email) {file ->
+                    view.findViewById<ImageView>(R.id.profile_image).setImageURI(file.toUri())
+                }
+            view.findViewById<TextView>(R.id.profile_username).text = it.email
+            view.findViewById<TextView>(R.id.profile_fullName).text = it.nickname.uppercase()
             view.findViewById<TextView>(R.id.profile_location).text = it.city
             view.findViewById<TextView>(R.id.profile_phone_number).text = it.phone
+            view.findViewById<TextView>(R.id.profile_joined_date).text = it.birthdate.toString()
             rowInterest(it, view)
         }
         val btn: ImageView = view.findViewById(R.id.profile_image)
@@ -59,17 +81,16 @@ class Fragment4 : Fragment(
     }
 
     private fun switchToNextView() {
-        val nextFragment = Fragment5() // Replace with the fragment you want to switch to
         parentFragmentManager.beginTransaction()
-            .add(R.id.frame, nextFragment)
             .addToBackStack(null)
             .hide(this)
-            .show(nextFragment)
             .commit()
+        switchToFragment5()
     }
 
     private fun rowInterest(user: User, view: View) {
         val layout = view.findViewById<LinearLayout>(R.id.ll_profile_interests)
+        layout.removeAllViews()
         for (interest in user.sportList) {
             if (interest.second == 0) {
                 continue

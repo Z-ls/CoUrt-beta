@@ -42,9 +42,12 @@ import it.polito.mad.court.dataclass.User
 @Composable
 fun DialogInvitation(
     emailList: MutableState<List<User>>,
-    onClickInvite: () -> Unit,
+    onClickInvite: (MutableState<Boolean>, MutableState<String>) -> Unit,
     onClickCancel: () -> Unit
 ) {
+
+    val warning = remember { mutableStateOf("") }
+    val showWarnings = remember { mutableStateOf(false) }
 
     Dialog(
         onDismissRequest = onClickCancel,
@@ -53,12 +56,10 @@ fun DialogInvitation(
         Surface(
             modifier = Modifier
                 .wrapContentWidth()
-                .fillMaxSize(),
-            shape = RoundedCornerShape(8.dp)
+                .fillMaxSize(), shape = RoundedCornerShape(8.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .padding(16.dp),
+                modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.Top,
             ) {
                 emailList.value.forEachIndexed { index, user ->
@@ -70,32 +71,32 @@ fun DialogInvitation(
                             list[index] = user
                             emailList.value = list
                         }
-                        Column(modifier = Modifier.wrapContentWidth())
-                        {
-                            IconButton(
-                                onClick = {
-                                    val list = emailList.value.toMutableList()
-                                    list.add(User())
-                                    emailList.value = list
-                                }
-                            ) {
+                        Column(modifier = Modifier.wrapContentWidth()) {
+                            IconButton(onClick = {
+                                val list = emailList.value.toMutableList()
+                                list.add(User())
+                                emailList.value = list
+                            }) {
                                 Icon(Icons.Default.Add, contentDescription = "Add")
                             }
                         }
                         if (index > 0) {
-                            IconButton(
-                                onClick = {
-                                    val list = emailList.value.toMutableList()
-                                    list.removeAt(index)
-                                    emailList.value = list
-                                }
-                            ) {
+                            IconButton(onClick = {
+                                val list = emailList.value.toMutableList()
+                                list.removeAt(index)
+                                emailList.value = list
+                            }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Remove")
                             }
                         }
                     }
                 }
-
+                if (showWarnings.value)
+                    Text(
+                        text = warning.value,
+                        modifier = Modifier.padding(top = 16.dp),
+                        color = androidx.compose.ui.graphics.Color.Red
+                    )
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -103,8 +104,9 @@ fun DialogInvitation(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Button(
-                        onClick = onClickInvite,
-                        modifier = Modifier.wrapContentWidth()
+                        onClick = {
+                            onClickInvite(showWarnings, warning)
+                        }, modifier = Modifier.wrapContentWidth()
                     ) {
                         Text("Invite")
                     }
@@ -112,8 +114,7 @@ fun DialogInvitation(
                         modifier = Modifier.width(16.dp)
                     )
                     Button(
-                        onClick = onClickCancel,
-                        modifier = Modifier.wrapContentWidth()
+                        onClick = onClickCancel, modifier = Modifier.wrapContentWidth()
                     ) {
                         Text("Cancel")
                     }
@@ -133,8 +134,7 @@ fun DialogUserSelection(userEmail: String, onSelect: (User) -> Unit) {
 
     Column(modifier = Modifier
         .clickable { isSearchOpen = true }
-        .fillMaxWidth(0.9f)
-    ) {
+        .fillMaxWidth(0.9f)) {
         OutlinedTextField(
             placeholder = {
                 if (userEmail.isNotBlank()) Text(userEmail)

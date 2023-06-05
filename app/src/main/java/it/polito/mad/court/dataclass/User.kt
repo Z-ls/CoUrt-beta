@@ -9,7 +9,7 @@ data class User(
     var lastname: String = "",
     var nickname: String = "",
     var gender: String = "",
-    var birthdate: LocalDate = LocalDate.now(),
+    var birthdate: LocalDate = LocalDate.of(2000, 1, 1),
     var height: Double = 0.0,
     var weight: Double = 0.0,
     var phone: String = "",

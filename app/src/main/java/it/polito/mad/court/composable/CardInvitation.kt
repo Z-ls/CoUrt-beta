@@ -1,11 +1,13 @@
 package it.polito.mad.court.composable
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -23,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -46,15 +49,27 @@ fun CardInvitation(
         return status == InvitationStatus.PENDING
     }
 
-    Card(
-        modifier = Modifier
-            .padding(vertical = 8.dp)
-            .fillMaxWidth()
+    val cardModifier =
+        if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE)
+            Modifier
+                .fillMaxHeight()
+                .padding(8.dp)
+                .width(300.dp)
+                .clickable(
+                    enabled = isPending(),
+                    onClick = {
+                        isExpanded = !isExpanded
+                    })
+        else Modifier
+            .padding(8.dp)
             .clickable(
                 enabled = isPending(),
                 onClick = {
                     isExpanded = !isExpanded
-                }),
+                })
+
+    Card(
+        modifier = cardModifier,
         colors = CardDefaults.cardColors(
             containerColor = when (status) {
                 InvitationStatus.ACCEPTED -> LightGreen80
@@ -143,7 +158,6 @@ fun CardInvitation(
                         },
                         onClickDecline = {
                             DbCourt().declineInvitation(
-                                user = user,
                                 invitation = invitation
                             )
                             status = InvitationStatus.DECLINED

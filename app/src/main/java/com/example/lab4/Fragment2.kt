@@ -6,10 +6,8 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
-import it.polito.mad.court.DbCourt
 import it.polito.mad.court.PageViewCourts
-import it.polito.mad.court.dataclass.User
-import kotlinx.coroutines.runBlocking
+import it.polito.mad.court.SharedPreferencesHelper
 
 
 class Fragment2 : Fragment() {
@@ -22,16 +20,11 @@ class Fragment2 : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        var user: User?
         super.onViewCreated(view, savedInstanceState)
-        runBlocking {
-            DbCourt().getUserByEmail("test@gmail.com") {
-                user = it
-                val composeView = view.findViewById<ComposeView>(R.id.composeViewCourts)
-                composeView.setContent {
-                    PageViewCourts(user = user ?: User())
-                }
-            }
+        val user = SharedPreferencesHelper.getUserData(requireContext())
+        val composeView = view.findViewById<ComposeView>(R.id.composeViewCourts)
+        composeView.setContent {
+            PageViewCourts(user = user)
         }
     }
 }

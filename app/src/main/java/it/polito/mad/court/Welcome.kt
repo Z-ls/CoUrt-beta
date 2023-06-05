@@ -7,7 +7,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -50,8 +49,6 @@ class Welcome : ComponentActivity() {
     }
 }
 
-
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun Logo() {
 
@@ -63,10 +60,10 @@ fun Logo() {
 
     LaunchedEffect(Unit) {
         showLogo = true
-        delay(2000) // wait for 2 seconds
+        delay(2000)
         showLogo = false
         delay(1500)
-        launcher.launch(Intent(context, MainActivity::class.java))
+        launcher.launch(Intent(context, ViewUserLogin::class.java))
     }
 
     AnimatedVisibility(
