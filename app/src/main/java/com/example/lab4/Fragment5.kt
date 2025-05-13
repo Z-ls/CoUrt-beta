@@ -231,7 +231,7 @@ class Fragment5 : Fragment() {
         v: View,
         menuInfo: ContextMenu.ContextMenuInfo?
     ) {
-        super.onCreateContextMenu(menu, v, menuInfo)
+//        super.onCreateContextMenu(menu, v, menuInfo)
         requireActivity().menuInflater.inflate(R.menu.photo_menu, menu)
     }
 

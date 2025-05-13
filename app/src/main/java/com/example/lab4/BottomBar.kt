@@ -171,7 +171,7 @@ class BottomBar : AppCompatActivity(), Fragment5Listener, Fragment4Listener {
         v: View,
         menuInfo: ContextMenu.ContextMenuInfo?
     ) {
-        super.onCreateContextMenu(menu, v, menuInfo)
+//        super.onCreateContextMenu(menu, v, menuInfo)
         menuInflater.inflate(R.menu.user_menu, menu)
     }
 

@@ -10,8 +10,6 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.Color.Companion.Black
-import androidx.compose.ui.graphics.Color.Companion.White
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -35,19 +33,19 @@ private val LightColorScheme = lightColorScheme(
     tertiary = Crimson40
 )
 
-val OrangeWhiteBlackPalette = lightColorScheme(
-    primary = Orange40,
-//    primaryVariant = Color(0xFFFF8C00),
-    secondary = Yellow40,
-//    secondaryVariant = Color(0xFFF5F5F5),
-    background = Black,
-    tertiary = Crimson40,
-    surface = Black,
-    onPrimary = Black,
-    onSecondary = Black,
-    onBackground = White,
-    onSurface = White
-)
+//val OrangeWhiteBlackPalette = lightColorScheme(
+//    primary = Orange40,
+////    primaryVariant = Color(0xFFFF8C00),
+//    secondary = Yellow40,
+////    secondaryVariant = Color(0xFFF5F5F5),
+//    background = Black,
+//    tertiary = Crimson40,
+//    surface = Black,
+//    onPrimary = Black,
+//    onSecondary = Black,
+//    onBackground = White,
+//    onSurface = White
+//)
 
 @Composable
 fun CoUrtTheme(
@@ -62,7 +60,7 @@ fun CoUrtTheme(
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
 
-        darkTheme -> OrangeWhiteBlackPalette
+        darkTheme -> DarkColorScheme
         else -> LightColorScheme
 //        else -> OrangeWhiteBlackPalette
     }
